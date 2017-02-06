@@ -3,70 +3,90 @@
 # http://qiita.com/mt08/items/ccc660f233e0f525b0da
 
 VB_NAME="Moebuntu 16.10"
-#
 VM_MEMORY=2048
 VM_CORES=2
 VM_HOSTNAME="moebuntu.localdomain"
-#VM_BASE_BOX="u1610d"
 VM_BASE_BOX="box-cutter/ubuntu1610-desktop"
 
 Vagrant.configure("2") do |config|
-    config.vm.box = VM_BASE_BOX
-    #config.vm.network "forwarded_port", guest: 80, host: 8080
-    #config.vm.network "public_network", bridge: 'Intel(R) Ethernet Connection I217-LM'
-    config.vm.hostname = VM_HOSTNAME
+	config.vm.box = VM_BASE_BOX
+	#config.vm.network "forwarded_port", guest: 80, host: 8080
+	#config.vm.network "public_network", bridge: 'Intel(R) Ethernet Connection I217-LM'
+	config.vm.hostname = VM_HOSTNAME
 
-    config.vm.provider "virtualbox" do |vb|
-        #   vb.gui = true
-        vb.name = VB_NAME
-        vb.memory = VM_MEMORY
-        vb.cpus = VM_CORES
-    end
+	config.vm.provider "virtualbox" do |vb|
+		#   vb.gui = true
+		vb.name = VB_NAME
+		vb.memory = VM_MEMORY
+		vb.cpus = VM_CORES
+	end
 
-    config.vm.provision "shell", inline: <<-SHELL
+	config.vm.provision "shell", inline: <<-SHELL
         #echo 'Acquire::http::Proxy "http://apt-cache-server:3142";' | tee /etc/apt/apt.conf.d/02proxy
-        #
-        # 日本語へ.
-        locale-gen "ja_JP.UTF-8"
-        localectl set-locale LANG=ja_JP.UTF-8
-        # 
-        # Ubuntu Japanese Teamの日本語環境 https://www.ubuntulinux.jp/
-        wget -q https://www.ubuntulinux.jp/ubuntu-ja-archive-keyring.gpg -O- |  apt-key add -
-        wget -q https://www.ubuntulinux.jp/ubuntu-jp-ppa-keyring.gpg -O- |  apt-key add -
-        wget https://www.ubuntulinux.jp/sources.list.d/yakkety.list -O /etc/apt/sources.list.d/ubuntu-ja.list
-        sudo apt-get update
-        apt-get install -y ubuntu-defaults-ja
+		#
+		# Locale setting: Japanese
+		locale-gen "ja_JP.UTF-8"
+		localectl set-locale LANG=ja_JP.UTF-8
+		#
+		wget -q https://www.ubuntulinux.jp/ubuntu-ja-archive-keyring.gpg -O- |  apt-key add -
+		wget -q https://www.ubuntulinux.jp/ubuntu-jp-ppa-keyring.gpg -O- |  apt-key add -
+		wget https://www.ubuntulinux.jp/sources.list.d/yakkety.list -O /etc/apt/sources.list.d/ubuntu-ja.list
+		sudo apt-get update
+		apt-get install -y ubuntu-defaults-ja
 
-        # moebuntu関係.
-        #
-        apt-get install -y compizconfig-settings-manager unity-tweak-tool
-        #
-        tar xf /vagrant/Moe-Pink10.tar.gz -C /usr/share/themes/
-        tar xf /vagrant/DashIcons3.tar.gz -C /tmp
-        cp /tmp/DashIcons3/MoeDashIcons/* /usr/share/unity/icons/
-        cp /usr/share/unity/icons/{panel_shadowPink.png,panel_shadow.png}
+		#
+		apt-get install -y compizconfig-settings-manager unity-tweak-tool
+		apt-get install -y imagemagick
+		#
+		tar xf /vagrant/Moe-Pink10.tar.gz -C /usr/share/themes/
+		tar xf /vagrant/DashIcons3.tar.gz -C /tmp
+		cp /tmp/DashIcons3/MoeDashIcons/* /usr/share/unity/icons/
+		cp /usr/share/unity/icons/{panel_shadowPink.png,panel_shadow.png}
 
-        #
-        apt-get -q update -q
-        DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
-    SHELL
+		#
+		apt-get -q update -q
+		DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+	SHELL
 
-    config.vm.provision "shell", privileged: false, inline: <<-SHELL
-        mkdir -p ${HOME}/{.icons,.fonts}
-        tar xf /vagrant/MoePinkIcons_150719.tar.gz -C ${HOME}/.icons
+	config.vm.provision "shell", privileged: false, inline: <<-SHELL
+		mkdir -p ${HOME}/{.icons,.fonts}
+		tar xf /vagrant/MoePinkIcons_150719.tar.gz -C ${HOME}/.icons
 
-        gsettings set org.gnome.desktop.interface gtk-theme 'Moe-Pink10'
-        gsettings set org.gnome.desktop.wm.preferences theme 'Moe-Pink10'
-        gsettings set org.gnome.desktop.interface icon-theme 'MoePinkIcons'
+		gsettings set org.gnome.desktop.interface gtk-theme 'Moe-Pink10'
+		gsettings set org.gnome.desktop.wm.preferences theme 'Moe-Pink10'
+		gsettings set org.gnome.desktop.interface icon-theme 'MoePinkIcons'
 
-        # Fonts
-        cp /vagrant/AKUBIN1.34.TTF ${HOME}/.fonts
-        gsettings set org.gnome.desktop.interface document-font-name 'Akubin 11'
-        gsettings set org.gnome.desktop.interface font-name 'Akubin 11'
-        gsettings set org.gnome.desktop.interface monospace-font-name 'Akubin 11'
-        gsettings set org.gnome.desktop.wm.preferences titlebar-font 'Akubin 11'
-        # Wallpaper
-        cp -v /vagrant/wallpaper.jpg ${HOME}
-        gsettings set org.gnome.desktop.background picture-uri 'file:///home/vagrant/wallpaper.jpg'
-    SHELL
+		# Color: Launcher 
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ background-color '#ff4cf684'
+
+		# Fonts
+		MOE_FONT_FILE=AKUBIN1.34.TTF
+		MOE_FONT_NAME='Akubin 11'
+		#MOE_FONT_FILE=setofont.ttf
+		#MOE_FONT_NAME='SetoFont 11'
+		cp /vagrant/${MOE_FONT_FILE} ${HOME}/.fonts
+		gsettings set org.gnome.desktop.interface document-font-name "$MOE_FONT_NAME"
+		gsettings set org.gnome.desktop.interface font-name "$MOE_FONT_NAME"
+		gsettings set org.gnome.desktop.interface monospace-font-name "$MOE_FONT_NAME"
+		gsettings set org.gnome.desktop.wm.preferences titlebar-font "$MOE_FONT_NAME"
+
+		# Wallpaper
+		MOE_WALLPAPER=wallpaper.jpg
+		MOE_LOGO=moebuntu_logo800new.png
+		cp -v /vagrant/${MOE_WALLPAPER} ${HOME}/wallpaper.jpg
+		convert -resize 1600 /vagrant/${MOE_WALLPAPER} ${HOME}/tmp1.png
+		convert -resize  720 /vagrant/${MOE_LOGO}      ${HOME}/tmp2.png
+		[ -f ${HOME}/tmp1.png ] && [ -f ${HOME}/tmp2.png ] && convert ${HOME}/tmp1.png ${HOME}/tmp2.png -gravity east -geometry +40+0 -compose over -composite ${HOME}/wallpaper.jpg
+		rm -v ${HOME}/tmp1.png ${HOME}/tmp2.png
+		gsettings set org.gnome.desktop.background picture-uri 'file:///home/vagrant/wallpaper.jpg'
+
+		# Step12: Color
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ override-decoration-theme true
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ shadow-x-offset 4
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ shadow-y-offset 4
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ active-shadow-radius 12
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ active-shadow-color '#99028e66'
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ inactive-shadow-radius 12
+		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ inactive-shadow-color '#99028ea5'
+	SHELL
 end
