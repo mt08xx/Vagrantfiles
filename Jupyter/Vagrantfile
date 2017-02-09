@@ -1,0 +1,52 @@
+# Vagrantfile
+# - Replace 'your_token_here' with yours :-)
+# http://qiita.com/mt08/items/24a06cbb36ec2cc6b683
+
+VB_NAME="Jupyter Notebook"
+VM_MEMORY=1024
+VM_CORES=2
+VM_BASE_BOX="bento/ubuntu-16.04"
+
+Vagrant.configure("2") do |config|
+	config.vm.box = VM_BASE_BOX
+	config.vm.network "forwarded_port", guest: 8888, host: 8888
+	config.vm.provider "virtualbox" do |vb|
+		#   vb.gui = true
+		vb.name = VB_NAME
+		vb.memory = VM_MEMORY
+		vb.cpus = VM_CORES
+	end
+
+	config.vm.provision "shell", inline: <<-SHELL
+		#whoami # => root
+		#echo 'Acquire::http::Proxy "http://apt-cache-server:3142";' | tee /etc/apt/apt.conf.d/02proxy
+		#
+		apt-get -q update -q
+		DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+		#
+		# Jupyter on Python2
+		apt-get -q install -q -y python-dev python-pip
+		pip install --upgrade pip
+		pip install --upgrade jupyter
+		#
+		# Python3 kernel
+		apt-get -q install -q -y python3-dev python3-pip
+		pip3 install --upgrade pip
+		python3 -m pip install ipykernel
+		python3 -m ipykernel install
+		#
+		mkdir -p /vagrant/notebook
+		apt-get autoremove -y ; apt-get clean
+	SHELL
+
+	config.vm.provision "shell", privileged: false, inline: <<-SHELL
+		#whoami # => vagrant 
+		jupyter notebook --generate-config -y
+		echo "c.NotebookApp.token = 'your_token_here'" >> $HOME/.jupyter/jupyter_notebook_config.py
+	SHELL
+
+	config.vm.provision "shell", privileged: false, run: "always", inline: <<-SHELL
+		#whoami # => vagrant 
+		jupyter notebook --notebook-dir=/vagrant/notebook --no-browser --ip=0.0.0.0 2>&1 &
+	SHELL
+end
