@@ -22,71 +22,38 @@ Vagrant.configure("2") do |config|
 	end
 
 	config.vm.provision "shell", inline: <<-SHELL
-        #echo 'Acquire::http::Proxy "http://apt-cache-server:3142";' | tee /etc/apt/apt.conf.d/02proxy
 		#
-		# Locale setting: Japanese
-		locale-gen "ja_JP.UTF-8"
-		localectl set-locale LANG=ja_JP.UTF-8
-		#
-		wget -q https://www.ubuntulinux.jp/ubuntu-ja-archive-keyring.gpg -O- |  apt-key add -
-		wget -q https://www.ubuntulinux.jp/ubuntu-jp-ppa-keyring.gpg -O- |  apt-key add -
-		wget https://www.ubuntulinux.jp/sources.list.d/yakkety.list -O /etc/apt/sources.list.d/ubuntu-ja.list
-		sudo apt-get update
-		apt-get install -y ubuntu-defaults-ja
+		if [ ! -f $HOME/.vagrant-provision1-done ]; then
+			echo 'Acquire::http::Proxy "http://linux64:3142";' | tee /etc/apt/apt.conf.d/02proxy
+			#
+			# Locale setting: Japanese
+			locale-gen "ja_JP.UTF-8"
+			localectl set-locale LANG=ja_JP.UTF-8
+			#
+			wget -q https://www.ubuntulinux.jp/ubuntu-ja-archive-keyring.gpg -O- |  apt-key add -
+			wget -q https://www.ubuntulinux.jp/ubuntu-jp-ppa-keyring.gpg -O- |  apt-key add -
+			wget https://www.ubuntulinux.jp/sources.list.d/yakkety.list -O /etc/apt/sources.list.d/ubuntu-ja.list
+			apt-get update
+			apt-get install -y ubuntu-defaults-ja
+			#
+			apt-get install -y compizconfig-settings-manager unity-tweak-tool
+			apt-get install -y imagemagick dos2unix
 
-		#
-		apt-get install -y compizconfig-settings-manager unity-tweak-tool
-		apt-get install -y imagemagick
-		#
-		tar xf /vagrant/Moe-Pink10.tar.gz -C /usr/share/themes/
-		tar xf /vagrant/DashIcons3.tar.gz -C /tmp
-		cp /tmp/DashIcons3/MoeDashIcons/* /usr/share/unity/icons/
-		cp /usr/share/unity/icons/{panel_shadowPink.png,panel_shadow.png}
-
-		#
-		apt-get -q update -q
-		DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+			apt-get -q update -q
+			DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+			#
+			touch $HOME/.vagrant-provision1-done
+		else
+			echo "Skipping the initail setup ..."
+		fi
 	SHELL
 
 	config.vm.provision "shell", privileged: false, inline: <<-SHELL
-		mkdir -p ${HOME}/{.icons,.fonts}
-		tar xf /vagrant/MoePinkIcons_150719.tar.gz -C ${HOME}/.icons
-
-		gsettings set org.gnome.desktop.interface gtk-theme 'Moe-Pink10'
-		gsettings set org.gnome.desktop.wm.preferences theme 'Moe-Pink10'
-		gsettings set org.gnome.desktop.interface icon-theme 'MoePinkIcons'
-
-		# Color: Launcher 
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ background-color '#ff4cf684'
-
-		# Fonts
-		MOE_FONT_FILE=AKUBIN1.34.TTF
-		MOE_FONT_NAME='Akubin 11'
-		#MOE_FONT_FILE=setofont.ttf
-		#MOE_FONT_NAME='SetoFont 11'
-		cp /vagrant/${MOE_FONT_FILE} ${HOME}/.fonts
-		gsettings set org.gnome.desktop.interface document-font-name "$MOE_FONT_NAME"
-		gsettings set org.gnome.desktop.interface font-name "$MOE_FONT_NAME"
-		gsettings set org.gnome.desktop.interface monospace-font-name "$MOE_FONT_NAME"
-		gsettings set org.gnome.desktop.wm.preferences titlebar-font "$MOE_FONT_NAME"
-
-		# Wallpaper
-		MOE_WALLPAPER=wallpaper.jpg
-		MOE_LOGO=moebuntu_logo800new.png
-		cp -v /vagrant/${MOE_WALLPAPER} ${HOME}/wallpaper.jpg
-		convert -resize 1600 /vagrant/${MOE_WALLPAPER} ${HOME}/tmp1.png
-		convert -resize  720 /vagrant/${MOE_LOGO}      ${HOME}/tmp2.png
-		[ -f ${HOME}/tmp1.png ] && [ -f ${HOME}/tmp2.png ] && convert ${HOME}/tmp1.png ${HOME}/tmp2.png -gravity east -geometry +40+0 -compose over -composite ${HOME}/wallpaper.jpg
-		rm -v ${HOME}/tmp1.png ${HOME}/tmp2.png
-		gsettings set org.gnome.desktop.background picture-uri 'file:///home/vagrant/wallpaper.jpg'
-
-		# Step12: Color
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ override-decoration-theme true
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ shadow-x-offset 4
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ shadow-y-offset 4
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ active-shadow-radius 12
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ active-shadow-color '#99028e66'
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ inactive-shadow-radius 12
-		gsettings set org.compiz.unityshell:/org/compiz/profiles/unity/plugins/unityshell/ inactive-shadow-color '#99028ea5'
+		export MOE_BASE_COLOR=Pink
+		export MOE_THEME_REVISION=10
+		for i in "MoeSetupTheme.sh" "MoeSetupFont.sh" "MoeSetupWallpaper.sh"; do
+		    file /vagrant/$i | grep CRLF &&	dos2unix /vagrant/$i
+			bash /vagrant/$i
+		done
 	SHELL
 end
