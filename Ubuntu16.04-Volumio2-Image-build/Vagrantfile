@@ -1,0 +1,32 @@
+VB_NAME="Ubuntu16.04-Volumio2-Image-build"
+VM_MEMORY=2048
+VM_CORES=2
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-16.04"
+    config.vm.provider "virtualbox" do |vb|
+        #   vb.gui = true
+        vb.name   = VB_NAME
+        vb.memory = VM_MEMORY
+        vb.cpus   = VM_CORES
+    end
+
+    config.vm.provision "shell", inline: <<-SHELL
+        #whoami # => root
+        echo 'Acquire::http::Proxy "http://linux64:3142";' | tee /etc/apt/apt.conf.d/02proxy
+        #
+        apt-get -q update -q
+        DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+        apt install -y git squashfs-tools kpartx multistrap qemu-user-static samba debootstrap parted dosfstools qemu binfmt-support qemu-utils
+	SHELL
+
+    config.vm.provision "shell", privileged: false, inline: <<-SHELL
+        #whoami # => vagrant 
+		cd ${HOME}
+		git clone https://github.com/volumio/Build.git ./Build
+		cd ./Build
+		time sudo ./build.sh -b arm -d pi -v 2.725
+		time bzip2 -9v ./Volumio*.img
+		cp -fv *.bz2 /vagrant
+	SHELL
+end
