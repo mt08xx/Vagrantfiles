@@ -1,0 +1,57 @@
+VB_NAME="Ubuntu16.04-EVAChargerSE-Image-build"
+VM_MEMORY=4096
+VM_CORES=3
+
+# vagrant up && vagrant reload && vagrant provision
+
+Vagrant.configure("2") do |config|
+	config.vm.box = "bento/ubuntu-16.04"
+	#config.disksize.size = '32GB'
+	config.vm.provider "virtualbox" do |vb|
+		#   vb.gui = true
+		vb.name   = VB_NAME
+		vb.memory = VM_MEMORY
+		vb.cpus   = VM_CORES
+	end
+
+	config.vm.provision "shell", inline: <<-SHELL
+		#whoami # => root
+		if [ ! -e /home/vagrant/.done_1st ] ;then 
+			#echo 'Acquire::http::Proxy "http://linux64:3142";' | tee /etc/apt/apt.conf.d/02proxy
+			#
+			apt-get -q update -q
+			#DEBIAN_FRONTEND=noninteractive apt-get -q -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+			apt install -y git make
+			sudo -u vagrant touch /home/vagrant/.done_1st
+		else
+			sudo -u vagrant touch /home/vagrant/.done_2nd
+		fi
+	SHELL
+
+	config.vm.provision "shell", privileged: false, inline: <<-SHELL
+		#whoami # => vagrant 
+		if [ -e /home/vagrant/.done_2nd ] ;then 
+			cd ${HOME}
+			git clone https://github.com/I2SE/stib.git
+			cd stib
+			
+			make zesty-requirements
+			time make prepare 
+			time make tools u-boot linux
+
+			if [ -e /etc/apt/apt.conf.d/02proxy ]; then 
+				sudo mv /etc/apt/apt.conf.d/02proxy ${HOME} 
+				sudo apt update
+			fi
+			time make rootfs
+			if [ -e ${HOME}/02proxy ]; then 
+				sudo mv ${HOME}/02proxy /etc/apt/apt.conf.d/
+				sudo apt update
+			fi
+
+			time make install 
+			make disk-image
+			ls -la images
+		fi
+	SHELL
+end
